@@ -42,7 +42,8 @@ RenderSettings:
 --- !u!157 &3
 LightmapSettings:
   m_ObjectHideFlags: 0
-  serializedVersion: 12
+  serializedVersion: 13
+  m_BakeOnSceneLoad: 0
   m_GISettings:
     serializedVersion: 2
     m_BounceScale: 1
@@ -241,7 +242,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   computeShader: {fileID: 7200000, guid: a9d20961058fcdb419c3e7a3d9c9bd19, type: 3}
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  material: {fileID: 2100000, guid: d2958beec83a694498140348c4d5d3c9, type: 2}
+  material: {fileID: 2100000, guid: 8de557422082181488ca9ea4e647cd21, type: 2}
 --- !u!4 &1915860274
 Transform:
   m_ObjectHideFlags: 0
