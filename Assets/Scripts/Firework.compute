@@ -1,0 +1,92 @@
+#pragma kernel Initialize
+#pragma kernel Update
+#pragma kernel Fire
+#pragma kernel Bomb
+
+struct particle
+{
+    float3 position; //デフォルトの位置
+    float3 velocity; //パーティクルの速度
+    float duration; //パーティクルの寿命
+    float4 color; //パーティクルの色
+    // bool 指定した場合、C#側ではintとして扱う必要がある
+    int isBomb; //爆発状態のものか    0 → no, 1 → yes
+};
+
+RWStructuredBuffer<particle> _ParticleBuffer; //パーティクルのデータを格納するバッファ
+ConsumeStructuredBuffer<uint> _PooledParticleBuffer; //未使用のパーティクルIDを格納するバッファ
+AppendStructuredBuffer<uint> _DeadParticleBuffer; //未使用のパーティクルID
+
+float _DeltaTime; //時間の経過を表す変数
+
+float3 _FirePosition; //パーティクルの発火位置
+float3 _FireVelocity; //パーティクルの発火速度
+float _FireDuration; //パーティクルの発火持続時間
+float _Time; //現在の時間
+float4 _BombColor; //爆発の色
+
+[numthreads(8, 1, 1)]
+void Initialize(uint3 id : SV_DispatchThreadID)
+{
+    // 未使用リストにid.xを追加
+    _DeadParticleBuffer.Append(id.x);
+}
+
+//ランダムな値を返す
+float rand(float2 co) //引数はシード値と呼ばれる　同じ値を渡せば同じものを返す
+{
+    return frac(sin(dot(co.xy, float2(12.9898, 78.233))) * 43758.5453);
+}
+
+[numthreads(8, 1, 1)]
+void Update(uint3 id: SV_DispatchThreadID)
+{
+    particle p = _ParticleBuffer[id.x];
+
+    if (p.duration > 0)
+    {
+        // パーティクルの位置を更新
+        p.position += p.velocity * _DeltaTime;
+        p.duration -= _DeltaTime;
+
+        // 更新したパーティクル情報をバッファに書き戻す
+        _ParticleBuffer[id.x] = p;
+
+        if (p.duration <= 0)
+        {
+            //NOTE: 1スレッドでConsume()を行うと、同じidが取り出されてしまうらしい
+            _DeadParticleBuffer.Append(id.x);
+        }
+    }
+}
+
+// 発火
+[numthreads(8, 1, 1)]
+void Fire()
+{
+    uint id = _PooledParticleBuffer.Consume(); // 未使用リストからIDを取り出す
+
+    particle p = _ParticleBuffer[id]; // パーティクルデータを取得
+    p.position = _FirePosition; // 発火位置を設定
+    p.velocity = _FireVelocity; // 発火速度を設定
+    p.duration = _FireDuration; // 発火持続時間を設定
+    p.color = float4(1, 1, 1, 1); // パーティクルの色を設定（例として白色）
+    p.isBomb = 0;
+
+    _ParticleBuffer[id] = p;
+}
+
+[numthreads(8, 1, 1)]
+void Bomb()
+{
+    uint id = _PooledParticleBuffer.Consume(); // 未使用リストからIDを取り出す
+
+    particle p = _ParticleBuffer[id]; // パーティクルデータを取得
+    p.position = _FirePosition; // 発火位置を設定
+    p.velocity = _FireVelocity; // 発火速度を設定
+    p.duration = _FireDuration; // 発火持続時間を設定
+    p.color = _BombColor; // パーティクルの色を設定（例として白色）
+    p.isBomb = 1;
+
+    _ParticleBuffer[id] = p;
+}
